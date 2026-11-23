@@ -1,0 +1,9 @@
+#!name=G1 SKU Bridge - Extract Only
+#!desc=Read-only Google One SKU extraction; logs [G1SKU], never changes response.
+#!system=ios
+
+[Script]
+g1-sku-extract = type=http-response,pattern=^https:\/\/one\.google\.com\/(?:u\/\d+\/)?(?:ai|plans)(?:[\/?#]|$),requires-body=1,max-size=0,script-path=https://cdn.jsdelivr.net/gh/nguyendp911/loon@main/g1-sku-bridge/shadowrocket/g1-sku-extract.js
+
+[MITM]
+hostname = %APPEND% one.google.com
