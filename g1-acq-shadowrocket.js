@@ -1,50 +1,73 @@
 /**
- * G1 ACQ Shadowrocket - self-hosted SKU inspector v1.0
+ * G1 ACQ Shadowrocket - Loon-parity response mapping v2.0
+ * Self-hosted at nguyendp911/loon; no dependency on crhywun CDN.
  *
- * Read-only: extracts Google One product IDs from the intercepted response.
- * Does not replace SKU, change any response body, or initiate a purchase.
+ * Operates only on Google One /ai responses (including /u/<n>/ai).
+ * Replaces eligible-looking SKU identifiers in the response; it does not
+ * change App Store pricing or verify account promotion eligibility.
  */
 "use strict";
 
 (function () {
-  try {
-    var body = (typeof $response !== "undefined" && $response &&
-      typeof $response.body === "string") ? $response.body : "";
+  var VERSION = "G1ACQ-SR-2.0";
+  var SKU_MAP = {
+    "g1.ios.20tb.m.v2": "g1.20tb.3months_ip_90p.acq",
+    "g1.ios.30tb.ai.pro.m": "g1.ai.ultra.3months_ip_90p.acq"
+  };
+  var FALLBACK = {
+    "g1.20tb.3months_ip_90p.acq": "g1.20tb.3months_ip_75p.acq",
+    "g1.ai.ultra.3months_ip_90p.acq": "g1.ai.ultra.3months_ip_75p.acq"
+  };
 
-    if (!body) {
-      console.log("[G1ACQ] No readable response body");
+  try {
+    var url = (typeof $request !== "undefined" && $request &&
+      typeof $request.url === "string") ? $request.url : "";
+
+    if (!/^https:\/\/one\.google\.com\/(?:u\/[0-9]+\/)?ai(?:[\/?#]|$)/i.test(url)) {
+      console.log("[G1ACQ] " + VERSION + " skipped (URL not matching /ai)");
+      $done({});
       return;
     }
 
-    var rx = /\bg1(?:\.[a-z0-9_]+){1,16}\b/gi;
-    var matches = body.match(rx) || [];
-    var seen = Object.create(null);
-    var skus = [];
-
-    for (var i = 0; i < matches.length; i++) {
-      var sku = matches[i].toLowerCase();
-      if (sku.length > 160 || seen[sku]) continue;
-      seen[sku] = true;
-      skus.push(sku);
-      if (skus.length >= 300) break;
+    var body = (typeof $response !== "undefined" && $response &&
+      typeof $response.body === "string") ? $response.body : "";
+    if (!body) {
+      console.log("[G1ACQ] " + VERSION + " skipped (empty/non-text body)");
+      $done({});
+      return;
     }
 
-    skus.sort();
-    var acqCount = 0, wbCount = 0;
-    for (var j = 0; j < skus.length; j++) {
-      if (/\.acq$/.test(skus[j])) acqCount++;
-      else if (/\.wb$/.test(skus[j])) wbCount++;
-    }
+    var found = body.match(/g1\.[a-z0-9._]{2,60}acq\b/gi) || [];
+    var catalog = Object.create(null);
+    for (var i = 0; i < found.length; i++) catalog[found[i]] = true;
 
-    console.log("[G1ACQ] v1.0 response scanned; SKU=" + skus.length +
-      ", ACQ=" + acqCount + ", WB=" + wbCount);
-    for (var k = 0; k < skus.length; k++) {
-      console.log("[G1ACQ] SKU " + skus[k]);
+    // Full SKU token boundaries avoid modifying unrelated longer product IDs.
+    var token = /(^|[^A-Za-z0-9._-])(g1\.[A-Za-z0-9._-]+)(?=$|[^A-Za-z0-9._-])/g;
+    var count = 0;
+    var events = Object.create(null);
+    var output = body.replace(token, function (whole, prefix, sku) {
+      if (!Object.prototype.hasOwnProperty.call(SKU_MAP, sku)) return whole;
+      var target = SKU_MAP[sku];
+      var fallback = FALLBACK[target];
+      if (!catalog[target] && fallback && catalog[fallback]) target = fallback;
+      count += 1;
+      if (!events[sku]) events[sku] = {target: target, hits: 0};
+      events[sku].hits += 1;
+      return prefix + target;
+    });
+
+    console.log("[G1ACQ] " + VERSION + " matches=" + count +
+      " observedACQ=" + Object.keys(catalog).length);
+    Object.keys(events).forEach(function (source) {
+      console.log("[G1ACQ] " + source + " -> " + events[source].target +
+        " x" + events[source].hits);
+    });
+    if (count && !Object.keys(catalog).length) {
+      console.log("[G1ACQ] WARNING: target SKU not observed in response catalog; promotion NOT verified");
     }
-    console.log("[G1ACQ] FINISHED (read-only; no SKU replacement)");
-  } catch (error) {
-    console.log("[G1ACQ] ERROR " + String(error && error.message || error).slice(0, 120));
-  } finally {
+    $done(count ? {body: output} : {});
+  } catch (e) {
+    console.log("[G1ACQ] " + VERSION + " error=" + String(e && e.message || e).slice(0, 120));
     $done({});
   }
 })();
