@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "G1 SKU Bridge",
+  "version": "2.1.0",
+  "description": "Import SKU logs from Shadowrocket.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://one.google.com/*"
+  ],
+  "action": {
+    "default_title": "G1 SKU Bridge",
+    "default_popup": "popup.html"
+  }
+}
