@@ -1,0 +1,15 @@
+#!name = G1 ACQ - Loon
+#!desc = Google One /ai subscription SKU mapping (ported from crhywun/g1-acq Shadowrocket module)
+#!author = crhywun (original script); Loon configuration conversion
+#!system = iOS,iPadOS
+
+[General]
+# Matches the original module's global UDP/443 QUIC blocking behavior.
+# WARNING: affects HTTP/3 for all applications while this plugin is enabled.
+disable-udp-ports = 443
+
+[Script]
+http-response ^https:\/\/one\.google\.com\/ai\? script-path=https://cdn.jsdelivr.net/gh/crhywun/g1-acq@main/g1-acq.js,requires-body=true,timeout=30,tag=G1-ACQ,enable=true
+
+[MITM]
+hostname = one.google.com
