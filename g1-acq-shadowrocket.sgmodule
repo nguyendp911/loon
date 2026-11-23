@@ -1,14 +1,14 @@
-#!name=G1 ACQ Shadowrocket (Self-hosted SKU Inspector)
-#!desc=Read-only SKU extraction for Google One; logs G1ACQ; does not alter responses.
+#!name=G1 ACQ - Shadowrocket v2.0
+#!desc=Google One /ai SKU mapping, self-hosted JS; includes /u/1/ai routing and logs
 #!system=ios
 
 [Rule]
-# Disable QUIC/HTTP3 over UDP 443 so supported HTTPS traffic can be intercepted.
-# CAUTION: this rule affects other applications while the module is enabled.
+# Like original Loon plugin: block QUIC (UDP/443) to allow HTTPS interception.
+# WARNING: this affects HTTP/3 traffic for all applications while enabled.
 AND,((PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP
 
 [Script]
-g1-acq-inspector = type=http-response,pattern=^https:\/\/one\.google\.com\/(?:u\/[0-9]+\/)?(?:ai|plans)(?:[\/?#]|$),requires-body=1,max-size=0,script-path=https://raw.githubusercontent.com/nguyendp911/loon/main/g1-acq-shadowrocket.js
+g1-acq = type=http-response,pattern=^https:\/\/one\.google\.com\/(?:u\/[0-9]+\/)?ai(?:[\/?#]|$),requires-body=1,max-size=0,script-path=https://raw.githubusercontent.com/nguyendp911/loon/main/g1-acq-shadowrocket.js
 
 [MITM]
 hostname = %APPEND% one.google.com
