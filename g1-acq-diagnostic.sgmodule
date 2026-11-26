@@ -1,0 +1,14 @@
+#!name=G1 ACQ Diagnostic (No SKU Rewrite)
+#!desc=Read-only diagnostic; same MITM and UDP/443 behavior as G1 ACQ, but NEVER modifies any response.
+#!system=ios
+
+[Rule]
+# Kept only to isolate the behavior of the current G1 ACQ module.
+# WARNING: affects UDP/443 for other apps while enabled.
+AND,((PROTOCOL,UDP),(DEST-PORT,443)),REJECT-NO-DROP
+
+[Script]
+g1-diagnostic = type=http-response,pattern=^https:\/\/one\.google\.com\/,requires-body=1,max-size=0,script-path=https://raw.githubusercontent.com/nguyendp911/loon/main/g1-acq-diagnostic.js
+
+[MITM]
+hostname = %APPEND% one.google.com
